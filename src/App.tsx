@@ -36,6 +36,18 @@ interface DragState {
   originPy: number
 }
 
+interface ResizeState {
+  active: boolean
+  regionId: string | null
+  handle: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w' | null
+  startPx: number
+  startPy: number
+  originPx: number
+  originPy: number
+  originPw: number
+  originPh: number
+}
+
 function App() {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
@@ -55,6 +67,17 @@ function App() {
     originPx: 0,
     originPy: 0,
   })
+  const [resize, setResize] = useState<ResizeState>({
+    active: false,
+    regionId: null,
+    handle: null,
+    startPx: 0,
+    startPy: 0,
+    originPx: 0,
+    originPy: 0,
+    originPw: 0,
+    originPh: 0,
+  })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
@@ -68,6 +91,17 @@ function App() {
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Delete' && selectedId) {
+        deleteRegion(selectedId)
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [selectedId])
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -121,7 +155,91 @@ function App() {
     })
   }
 
+  const handleResizeMouseDown = (
+    e: React.MouseEvent,
+    region: Region,
+    handle: 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w'
+  ) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const { px, py } = getPct(e)
+    setSelectedId(region.id)
+    setResize({
+      active: true,
+      regionId: region.id,
+      handle,
+      startPx: px,
+      startPy: py,
+      originPx: region.px,
+      originPy: region.py,
+      originPw: region.pw,
+      originPh: region.ph,
+    })
+  }
+
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (resize.active && resize.regionId) {
+      const { px, py } = getPct(e)
+      const dx = px - resize.startPx
+      const dy = py - resize.startPy
+
+      setRegions((prev) =>
+        prev.map((r) => {
+          if (r.id !== resize.regionId) return r
+
+          let nextPx = resize.originPx
+          let nextPy = resize.originPy
+          let nextPw = resize.originPw
+          let nextPh = resize.originPh
+
+          const handle = resize.handle
+          const minSize = 2 // Minimum 2%
+
+          if (handle === 'nw') {
+            nextPx = clamp(resize.originPx + dx, 0, 100 - minSize)
+            nextPy = clamp(resize.originPy + dy, 0, 100 - minSize)
+            nextPw = clamp(resize.originPw - dx, minSize, 100 - nextPx)
+            nextPh = clamp(resize.originPh - dy, minSize, 100 - nextPy)
+          } else if (handle === 'ne') {
+            nextPy = clamp(resize.originPy + dy, 0, 100 - minSize)
+            nextPw = clamp(resize.originPw + dx, minSize, 100 - nextPx)
+            nextPh = clamp(resize.originPh - dy, minSize, 100 - nextPy)
+          } else if (handle === 'sw') {
+            nextPx = clamp(resize.originPx + dx, 0, 100 - minSize)
+            nextPw = clamp(resize.originPw - dx, minSize, 100 - nextPx)
+            nextPh = clamp(resize.originPh + dy, minSize, 100 - nextPy)
+          } else if (handle === 'se') {
+            nextPw = clamp(resize.originPw + dx, minSize, 100 - nextPx)
+            nextPh = clamp(resize.originPh + dy, minSize, 100 - nextPy)
+          } else if (handle === 'n') {
+            nextPy = clamp(resize.originPy + dy, 0, 100 - minSize)
+            nextPh = clamp(resize.originPh - dy, minSize, 100 - nextPy)
+          } else if (handle === 's') {
+            nextPh = clamp(resize.originPh + dy, minSize, 100 - nextPy)
+          } else if (handle === 'e') {
+            nextPw = clamp(resize.originPw + dx, minSize, 100 - nextPx)
+          } else if (handle === 'w') {
+            nextPx = clamp(resize.originPx + dx, 0, 100 - minSize)
+            nextPw = clamp(resize.originPw - dx, minSize, 100 - nextPx)
+          }
+
+          return {
+            ...r,
+            px: nextPx,
+            py: nextPy,
+            pw: nextPw,
+            ph: nextPh,
+            x: Math.round((nextPx / 100) * naturalSize.width),
+            y: Math.round((nextPy / 100) * naturalSize.height),
+            width: Math.round((nextPw / 100) * naturalSize.width),
+            height: Math.round((nextPh / 100) * naturalSize.height),
+          }
+        })
+      )
+      return
+    }
+
     if (drag.active && drag.regionId) {
       const { px, py } = getPct(e)
       const dx = px - drag.startPx
@@ -150,6 +268,11 @@ function App() {
   }
 
   const handleMouseUp = () => {
+    if (resize.active) {
+      setResize((r) => ({ ...r, active: false, regionId: null, handle: null }))
+      return
+    }
+
     if (drag.active) {
       setDrag((d) => ({ ...d, active: false, regionId: null }))
       return
@@ -288,7 +411,7 @@ function App() {
                 <span className="icf-dim-badge">
                   {naturalSize.width} × {naturalSize.height} px
                 </span>
-                <span className="icf-hint">Click and drag to draw a region</span>
+                <span className="icf-hint">Drag to draw • Drag to move • Del to delete</span>
               </div>
 
               <div className="icf-canvas-view">
@@ -318,6 +441,20 @@ function App() {
                       onMouseDown={(e) => handleRegionMouseDown(e, r)}
                     >
                       <span className="icf-region-label">{r.label}</span>
+                      
+                      {/* Resize handles - only show when selected */}
+                      {selectedId === r.id && (
+                        <>
+                          <div className="icf-resize-handle nw" onMouseDown={(e) => handleResizeMouseDown(e, r, 'nw')} />
+                          <div className="icf-resize-handle ne" onMouseDown={(e) => handleResizeMouseDown(e, r, 'ne')} />
+                          <div className="icf-resize-handle sw" onMouseDown={(e) => handleResizeMouseDown(e, r, 'sw')} />
+                          <div className="icf-resize-handle se" onMouseDown={(e) => handleResizeMouseDown(e, r, 'se')} />
+                          <div className="icf-resize-handle n" onMouseDown={(e) => handleResizeMouseDown(e, r, 'n')} />
+                          <div className="icf-resize-handle s" onMouseDown={(e) => handleResizeMouseDown(e, r, 's')} />
+                          <div className="icf-resize-handle e" onMouseDown={(e) => handleResizeMouseDown(e, r, 'e')} />
+                          <div className="icf-resize-handle w" onMouseDown={(e) => handleResizeMouseDown(e, r, 'w')} />
+                        </>
+                      )}
                     </div>
                   ))}
 
@@ -375,6 +512,19 @@ function App() {
                       onChange={(e) => updateLabel(r.id, e.target.value)}
                       onClick={(e) => e.stopPropagation()}
                     />
+                    <button
+                      className="icf-ri-add-meta"
+                      title="Add metadata field"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        if (expandedRegionId !== r.id) {
+                          setExpandedRegionId(r.id)
+                        }
+                        addMetadataField(r.id)
+                      }}
+                    >
+                      +
+                    </button>
                     <button
                       className="icf-ri-delete"
                       title="Delete region"
