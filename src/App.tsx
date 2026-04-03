@@ -14,6 +14,8 @@ interface Region {
   py: number
   pw: number
   ph: number
+  // Custom key-value metadata
+  metadata: Record<string, string>
 }
 
 interface DrawState {
@@ -54,6 +56,7 @@ function App() {
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+  const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef(0)
@@ -175,6 +178,7 @@ function App() {
         py,
         pw,
         ph,
+        metadata: {},
       }
       setRegions((prev) => [...prev, region])
       setSelectedId(region.id)
@@ -192,14 +196,50 @@ function App() {
     setRegions((prev) => prev.map((r) => (r.id === id ? { ...r, label } : r)))
   }
 
+  const addMetadataField = (id: string) => {
+    setRegions((prev) =>
+      prev.map((r) => {
+        if (r.id !== id) return r
+        const newKey = `field_${Object.keys(r.metadata).length + 1}`
+        return {
+          ...r,
+          metadata: { ...r.metadata, [newKey]: '' },
+        }
+      })
+    )
+  }
+
+  const updateMetadataField = (regionId: string, oldKey: string, newKey: string, value: string) => {
+    setRegions((prev) =>
+      prev.map((r) => {
+        if (r.id !== regionId) return r
+        const newMetadata = { ...r.metadata }
+        if (oldKey !== newKey) delete newMetadata[oldKey]
+        newMetadata[newKey] = value
+        return { ...r, metadata: newMetadata }
+      })
+    )
+  }
+
+  const deleteMetadataField = (regionId: string, key: string) => {
+    setRegions((prev) =>
+      prev.map((r) => {
+        if (r.id !== regionId) return r
+        const newMetadata = { ...r.metadata }
+        delete newMetadata[key]
+        return { ...r, metadata: newMetadata }
+      })
+    )
+  }
+
   const copyJSON = async () => {
-    const data = regions.map(({ label, x, y, width, height }) => ({
-      label,
-      x,
-      y,
-      width,
-      height,
-    }))
+    const data = regions.map(({ label, x, y, width, height, metadata }) => {
+      const obj: Record<string, any> = { label, x, y, width, height }
+      if (Object.keys(metadata).length > 0) {
+        obj.metadata = metadata
+      }
+      return obj
+    })
     await navigator.clipboard.writeText(JSON.stringify(data, null, 2))
     setCopied(true)
     setTimeout(() => setCopied(false), 2000)
@@ -354,6 +394,69 @@ function App() {
                     <span><i>y</i><b>{r.y}</b></span>
                     <span><i>w</i><b>{r.width}</b></span>
                     <span><i>h</i><b>{r.height}</b></span>
+                  </div>
+                  
+                  {/* Metadata section */}
+                  <div className="icf-ri-metadata">
+                    <button
+                      className="icf-ri-meta-toggle"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        setExpandedRegionId(expandedRegionId === r.id ? null : r.id)
+                      }}
+                    >
+                      <span>Custom Fields</span>
+                      <span className="icf-meta-badge">{Object.keys(r.metadata).length}</span>
+                      <span className={`icf-chevron${expandedRegionId === r.id ? ' open' : ''}`}>›</span>
+                    </button>
+                    
+                    {expandedRegionId === r.id && (
+                      <div className="icf-ri-fields">
+                        {Object.entries(r.metadata).map(([key, value]) => (
+                          <div key={key} className="icf-field-row">
+                            <input
+                              className="icf-field-key"
+                              placeholder="Key"
+                              value={key}
+                              onChange={(e) => {
+                                e.stopPropagation()
+                                updateMetadataField(r.id, key, e.target.value, value)
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <input
+                              className="icf-field-value"
+                              placeholder="Value"
+                              value={value}
+                              onChange={(e) => {
+                                e.stopPropagation()
+                                updateMetadataField(r.id, key, key, e.target.value)
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                            />
+                            <button
+                              className="icf-field-delete"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                deleteMetadataField(r.id, key)
+                              }}
+                              title="Delete field"
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                        <button
+                          className="icf-field-add"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            addMetadataField(r.id)
+                          }}
+                        >
+                          + Add Field
+                        </button>
+                      </div>
+                    )}
                   </div>
                 </li>
               ))}

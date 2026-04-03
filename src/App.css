@@ -389,6 +389,144 @@
   }
 }
 
+/* ===== Custom Fields Metadata ===== */
+
+.icf-ri-metadata {
+  margin-top: 8px;
+}
+
+.icf-ri-meta-toggle {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  justify-content: space-between;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 6px 8px;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--text-h);
+  cursor: pointer;
+  transition: all 0.15s;
+
+  &:hover {
+    border-color: var(--accent-border);
+  }
+}
+
+.icf-meta-badge {
+  font-size: 10px;
+  font-weight: 600;
+  background: var(--accent-bg);
+  color: var(--accent);
+  padding: 2px 5px;
+  border-radius: 99px;
+  line-height: 1;
+}
+
+.icf-chevron {
+  display: inline-flex;
+  font-size: 14px;
+  color: var(--text);
+  transition: transform 0.2s;
+
+  &.open {
+    transform: rotate(90deg);
+  }
+}
+
+.icf-ri-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+  padding: 8px;
+  background: var(--code-bg);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+}
+
+.icf-field-row {
+  display: flex;
+  gap: 5px;
+  align-items: center;
+}
+
+.icf-field-key,
+.icf-field-value {
+  flex: 1;
+  min-width: 0;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 6px;
+  font-size: 11px;
+  font-family: var(--mono);
+  color: var(--text-h);
+  outline: none;
+  transition: border-color 0.15s;
+
+  &::placeholder {
+    color: var(--text);
+    opacity: 0.5;
+  }
+
+  &:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 2px rgba(170, 59, 255, 0.1);
+  }
+}
+
+.icf-field-key {
+  flex: 0.8;
+  font-weight: 500;
+}
+
+.icf-field-value {
+  flex: 1.2;
+}
+
+.icf-field-delete {
+  background: none;
+  border: none;
+  color: var(--text);
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: color 0.15s, background 0.15s;
+
+  &:hover {
+    color: #f87171;
+    background: rgba(248, 113, 113, 0.12);
+  }
+}
+
+.icf-field-add {
+  display: block;
+  width: 100%;
+  background: var(--accent-bg);
+  border: 1px dashed var(--accent-border);
+  border-radius: 4px;
+  padding: 5px;
+  font-size: 11px;
+  font-weight: 500;
+  color: var(--accent);
+  cursor: pointer;
+  transition: all 0.15s;
+  margin-top: 2px;
+
+  &:hover {
+    background: var(--accent);
+    color: #fff;
+    border-style: solid;
+  }
+}
+
 /* ===== Buttons ===== */
 
 .icf-btn {
