@@ -176,7 +176,7 @@
   box-sizing: border-box;
   border: 2px solid rgba(170, 59, 255, 0.85);
   background: rgba(170, 59, 255, 0.1);
-  cursor: pointer;
+  cursor: move;
   transition: background 0.15s, border-color 0.15s;
 
   &:hover {

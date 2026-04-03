@@ -24,6 +24,15 @@ interface DrawState {
   curPy: number
 }
 
+interface DragState {
+  active: boolean
+  regionId: string | null
+  startPx: number
+  startPy: number
+  originPx: number
+  originPy: number
+}
+
 function App() {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
@@ -34,6 +43,14 @@ function App() {
     startPy: 0,
     curPx: 0,
     curPy: 0,
+  })
+  const [drag, setDrag] = useState<DragState>({
+    active: false,
+    regionId: null,
+    startPx: 0,
+    startPy: 0,
+    originPx: 0,
+    originPy: 0,
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
@@ -73,6 +90,7 @@ function App() {
   }
 
   const handleMouseDown = (e: React.MouseEvent) => {
+    if (drag.active) return
     if (e.button !== 0) return
     e.preventDefault()
     const { px, py } = getPct(e)
@@ -80,13 +98,59 @@ function App() {
     setSelectedId(null)
   }
 
+  const clamp = (value: number, min: number, max: number) =>
+    Math.max(min, Math.min(value, max))
+
+  const handleRegionMouseDown = (e: React.MouseEvent, region: Region) => {
+    if (e.button !== 0) return
+    e.preventDefault()
+    e.stopPropagation()
+    const { px, py } = getPct(e)
+    setSelectedId(region.id)
+    setDrag({
+      active: true,
+      regionId: region.id,
+      startPx: px,
+      startPy: py,
+      originPx: region.px,
+      originPy: region.py,
+    })
+  }
+
   const handleMouseMove = (e: React.MouseEvent) => {
+    if (drag.active && drag.regionId) {
+      const { px, py } = getPct(e)
+      const dx = px - drag.startPx
+      const dy = py - drag.startPy
+
+      setRegions((prev) =>
+        prev.map((r) => {
+          if (r.id !== drag.regionId) return r
+          const nextPx = clamp(drag.originPx + dx, 0, 100 - r.pw)
+          const nextPy = clamp(drag.originPy + dy, 0, 100 - r.ph)
+          return {
+            ...r,
+            px: nextPx,
+            py: nextPy,
+            x: Math.round((nextPx / 100) * naturalSize.width),
+            y: Math.round((nextPy / 100) * naturalSize.height),
+          }
+        }),
+      )
+      return
+    }
+
     if (!draw.active) return
     const { px, py } = getPct(e)
     setDraw((d) => ({ ...d, curPx: px, curPy: py }))
   }
 
   const handleMouseUp = () => {
+    if (drag.active) {
+      setDrag((d) => ({ ...d, active: false, regionId: null }))
+      return
+    }
+
     if (!draw.active) return
     const { startPx, startPy, curPx, curPy } = draw
     const px = Math.min(startPx, curPx)
@@ -214,10 +278,7 @@ function App() {
                       key={r.id}
                       className={`icf-region-rect${selectedId === r.id ? ' active' : ''}`}
                       style={{ left: `${r.px}%`, top: `${r.py}%`, width: `${r.pw}%`, height: `${r.ph}%` }}
-                      onMouseDown={(e) => {
-                        e.stopPropagation()
-                        setSelectedId(r.id)
-                      }}
+                      onMouseDown={(e) => handleRegionMouseDown(e, r)}
                     >
                       <span className="icf-region-label">{r.label}</span>
                     </div>
