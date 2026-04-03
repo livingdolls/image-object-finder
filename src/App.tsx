@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from 'react'
 import './App.css'
+import logo from '../src/assets/logo.png'
 
 interface Region {
   id: string
@@ -259,11 +260,7 @@ function App() {
       {/* Header */}
       <header className="icf-header">
         <div className="icf-header-title">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2" />
-            <circle cx="8.5" cy="8.5" r="1.5" />
-            <path d="M21 15l-5-5L5 21" strokeLinecap="round" strokeLinejoin="round" />
-          </svg>
+          <img src={logo} alt="Icon" className="icf-header-icon" height={50} width={50} />
           <h1>Image Coordinate Finder</h1>
         </div>
         <p>Upload an image, then click and drag to mark objects and get their coordinates.</p>
