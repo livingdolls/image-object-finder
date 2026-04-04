@@ -16,6 +16,7 @@ export interface Region {
 }
 
 export type ResizeHandle = 'nw' | 'ne' | 'sw' | 'se' | 'n' | 's' | 'e' | 'w'
+export type AlignmentMode = 'all' | 'strict-edge'
 
 export interface DrawState {
   active: boolean

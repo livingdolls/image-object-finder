@@ -1,30 +1,35 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import type { DragState, DrawState, Region, ResizeHandle, ResizeState } from '../types/region'
+import type {
+  AlignmentMode,
+  DragState,
+  DrawState,
+  Region,
+  ResizeHandle,
+  ResizeState,
+} from '../types/region'
 
 const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(value, max))
 
 const ALIGN_TOLERANCE_PCT = 0.3
 
-const getBestAlignedPoint = (
+const getAlignedActivePoints = (
   activePoints: number[],
   otherPoints: number[],
   tolerance: number
 ) => {
-  let bestMatch: { activePoint: number; delta: number } | null = null
+  const alignedPoints = new Set<number>()
 
   for (const activePoint of activePoints) {
     for (const otherPoint of otherPoints) {
       const delta = Math.abs(activePoint - otherPoint)
       if (delta > tolerance) continue
 
-      if (!bestMatch || delta < bestMatch.delta) {
-        bestMatch = { activePoint, delta }
-      }
+      alignedPoints.add(activePoint)
     }
   }
 
-  return bestMatch
+  return [...alignedPoints].sort((a, b) => a - b)
 }
 
 export function useImageCoordinateFinder() {
@@ -58,6 +63,7 @@ export function useImageCoordinateFinder() {
     originPh: 0,
   })
   const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [alignmentMode, setAlignmentMode] = useState<AlignmentMode>('all')
   const [copied, setCopied] = useState(false)
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
 
@@ -383,59 +389,80 @@ export function useImageCoordinateFinder() {
   )
 
   const dragGuides = useMemo(() => {
-    if (!drag.active || !drag.regionId) return null
-    const activeRegion = regions.find((region) => region.id === drag.regionId)
+    const activeRegionId = drag.active ? drag.regionId : resize.active ? resize.regionId : null
+    if (!activeRegionId) return null
+    const activeRegion = regions.find((region) => region.id === activeRegionId)
     if (!activeRegion) return null
 
-    const activeXPoints = [
-      activeRegion.px,
-      activeRegion.px + activeRegion.pw / 2,
-      activeRegion.px + activeRegion.pw,
-    ]
-    const activeYPoints = [
-      activeRegion.py,
-      activeRegion.py + activeRegion.ph / 2,
-      activeRegion.py + activeRegion.ph,
-    ]
+    const activeXPoints =
+      alignmentMode === 'strict-edge'
+        ? [activeRegion.px, activeRegion.px + activeRegion.pw]
+        : [
+            activeRegion.px,
+            activeRegion.px + activeRegion.pw / 2,
+            activeRegion.px + activeRegion.pw,
+          ]
+    const activeYPoints =
+      alignmentMode === 'strict-edge'
+        ? [activeRegion.py, activeRegion.py + activeRegion.ph]
+        : [
+            activeRegion.py,
+            activeRegion.py + activeRegion.ph / 2,
+            activeRegion.py + activeRegion.ph,
+          ]
 
     const otherRegions = regions.filter((region) => region.id !== activeRegion.id)
 
-    const otherXPoints = otherRegions.flatMap((region) => [
-      region.px,
-      region.px + region.pw / 2,
-      region.px + region.pw,
-    ])
-    const otherYPoints = otherRegions.flatMap((region) => [
-      region.py,
-      region.py + region.ph / 2,
-      region.py + region.ph,
-    ])
+    const otherXPoints = otherRegions.flatMap((region) =>
+      alignmentMode === 'strict-edge'
+        ? [region.px, region.px + region.pw]
+        : [region.px, region.px + region.pw / 2, region.px + region.pw]
+    )
+    const otherYPoints = otherRegions.flatMap((region) =>
+      alignmentMode === 'strict-edge'
+        ? [region.py, region.py + region.ph]
+        : [region.py, region.py + region.ph / 2, region.py + region.ph]
+    )
 
-    const xMatch = getBestAlignedPoint(activeXPoints, otherXPoints, ALIGN_TOLERANCE_PCT)
-    const yMatch = getBestAlignedPoint(activeYPoints, otherYPoints, ALIGN_TOLERANCE_PCT)
+    const alignedXPoints = getAlignedActivePoints(
+      activeXPoints,
+      otherXPoints,
+      ALIGN_TOLERANCE_PCT
+    )
+    const alignedYPoints = getAlignedActivePoints(
+      activeYPoints,
+      otherYPoints,
+      ALIGN_TOLERANCE_PCT
+    )
 
     const centerX = activeRegion.px + activeRegion.pw / 2
     const centerY = activeRegion.py + activeRegion.ph / 2
 
     return {
-      x: xMatch ? xMatch.activePoint : centerX,
-      y: yMatch ? yMatch.activePoint : centerY,
-      alignedX: Boolean(xMatch),
-      alignedY: Boolean(yMatch),
+      xGuides:
+        alignedXPoints.length > 0
+          ? alignedXPoints.map((value) => ({ value, aligned: true }))
+          : [{ value: centerX, aligned: false }],
+      yGuides:
+        alignedYPoints.length > 0
+          ? alignedYPoints.map((value) => ({ value, aligned: true }))
+          : [{ value: centerY, aligned: false }],
     }
-  }, [drag.active, drag.regionId, regions])
+  }, [drag.active, drag.regionId, resize.active, resize.regionId, regions, alignmentMode])
 
   return {
     imageSrc,
     naturalSize,
     regions,
     selectedId,
+    alignmentMode,
     copied,
     expandedRegionId,
     wrapperRef,
     activeOverlay,
     dragGuides,
     setSelectedId,
+    setAlignmentMode,
     handleFileUpload,
     handleImageLoad,
     handleMouseDown,

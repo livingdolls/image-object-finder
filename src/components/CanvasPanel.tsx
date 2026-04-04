@@ -1,13 +1,18 @@
 import { RegionOverlay } from './RegionOverlay'
-import type { Region, ResizeHandle } from '../types/region'
+import type { AlignmentMode, Region, ResizeHandle } from '../types/region'
 
 interface CanvasPanelProps {
   imageSrc: string | null
   naturalSize: { width: number; height: number }
   regions: Region[]
   selectedId: string | null
+  alignmentMode: AlignmentMode
   activeOverlay: { left: string; top: string; width: string; height: string } | null
-  dragGuides: { x: number; y: number; alignedX: boolean; alignedY: boolean } | null
+  dragGuides: {
+    xGuides: Array<{ value: number; aligned: boolean }>
+    yGuides: Array<{ value: number; aligned: boolean }>
+  } | null
+  onAlignmentModeChange: (mode: AlignmentMode) => void
   wrapperRef: React.RefObject<HTMLDivElement | null>
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onMouseDown: (e: React.MouseEvent) => void
@@ -23,8 +28,10 @@ export function CanvasPanel({
   naturalSize,
   regions,
   selectedId,
+  alignmentMode,
   activeOverlay,
   dragGuides,
+  onAlignmentModeChange,
   wrapperRef,
   onFileUpload,
   onMouseDown,
@@ -59,6 +66,16 @@ export function CanvasPanel({
             <span className="icf-dim-badge">
               {naturalSize.width} x {naturalSize.height} px
             </span>
+            <label className="icf-align-mode">
+              <span>Align</span>
+              <select
+                value={alignmentMode}
+                onChange={(e) => onAlignmentModeChange(e.target.value as AlignmentMode)}
+              >
+                <option value="all">All</option>
+                <option value="strict-edge">Strict Edge</option>
+              </select>
+            </label>
             <span className="icf-hint">Drag to draw • Drag to move • Del to delete</span>
           </div>
 
@@ -75,14 +92,20 @@ export function CanvasPanel({
 
               {dragGuides && (
                 <>
-                  <div
-                    className={`icf-guide-line x${dragGuides.alignedY ? ' aligned' : ''}`}
-                    style={{ top: `${dragGuides.y}%` }}
-                  />
-                  <div
-                    className={`icf-guide-line y${dragGuides.alignedX ? ' aligned' : ''}`}
-                    style={{ left: `${dragGuides.x}%` }}
-                  />
+                  {dragGuides.yGuides.map((guide) => (
+                    <div
+                      key={`y-${guide.value}`}
+                      className={`icf-guide-line x${guide.aligned ? ' aligned' : ''}`}
+                      style={{ top: `${guide.value}%` }}
+                    />
+                  ))}
+                  {dragGuides.xGuides.map((guide) => (
+                    <div
+                      key={`x-${guide.value}`}
+                      className={`icf-guide-line y${guide.aligned ? ' aligned' : ''}`}
+                      style={{ left: `${guide.value}%` }}
+                    />
+                  ))}
                 </>
               )}
 

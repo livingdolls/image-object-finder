@@ -11,12 +11,14 @@ function App() {
     naturalSize,
     regions,
     selectedId,
+    alignmentMode,
     copied,
     expandedRegionId,
     wrapperRef,
     activeOverlay,
     dragGuides,
     setSelectedId,
+    setAlignmentMode,
     handleFileUpload,
     handleImageLoad,
     handleMouseDown,
@@ -44,8 +46,10 @@ function App() {
           naturalSize={naturalSize}
           regions={regions}
           selectedId={selectedId}
+          alignmentMode={alignmentMode}
           activeOverlay={activeOverlay}
           dragGuides={dragGuides}
+          onAlignmentModeChange={setAlignmentMode}
           wrapperRef={wrapperRef}
           onFileUpload={handleFileUpload}
           onMouseDown={handleMouseDown}
