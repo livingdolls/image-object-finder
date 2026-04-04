@@ -81,6 +81,7 @@ export function useImageCoordinateFinder() {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef(0)
   const prevUrlRef = useRef<string | null>(null)
+  const copiedRegionRef = useRef<Region | null>(null)
 
   useEffect(() => {
     return () => {
@@ -88,16 +89,76 @@ export function useImageCoordinateFinder() {
     }
   }, [])
 
+  const buildDuplicatedRegion = (source: Region, targetRegions: Region[]) => {
+    const offsetPct = 1
+    const nextPx = clamp(source.px + offsetPct, 0, 100 - source.pw)
+    const nextPy = clamp(source.py + offsetPct, 0, 100 - source.ph)
+    const labels = new Set(targetRegions.map((region) => region.label))
+    const copiedLabel = getCopiedLabel(source.label, labels)
+
+    return {
+      ...source,
+      id: crypto.randomUUID(),
+      label: copiedLabel,
+      px: nextPx,
+      py: nextPy,
+      x:
+        naturalSize.width > 0
+          ? Math.round((nextPx / 100) * naturalSize.width)
+          : source.x,
+      y:
+        naturalSize.height > 0
+          ? Math.round((nextPy / 100) * naturalSize.height)
+          : source.y,
+      metadata: { ...source.metadata },
+    }
+  }
+
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
+      const target = e.target as HTMLElement | null
+      const isTypingTarget =
+        target instanceof HTMLInputElement ||
+        target instanceof HTMLTextAreaElement ||
+        target?.isContentEditable
+
+      if (isTypingTarget) return
+
       if (e.key === 'Delete' && selectedId) {
         deleteRegion(selectedId)
+        return
+      }
+
+      const isCopy = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'c'
+      const isPaste = (e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'v'
+
+      if (isCopy && selectedId) {
+        const selectedRegion = regions.find((region) => region.id === selectedId)
+        if (!selectedRegion) return
+        copiedRegionRef.current = {
+          ...selectedRegion,
+          metadata: { ...selectedRegion.metadata },
+        }
+        e.preventDefault()
+        return
+      }
+
+      if (isPaste && copiedRegionRef.current) {
+        const duplicated = buildDuplicatedRegion(copiedRegionRef.current, regions)
+        setRegions((prev) => [...prev, duplicated])
+        setSelectedId(duplicated.id)
+        setExpandedRegionId(duplicated.id)
+        copiedRegionRef.current = {
+          ...duplicated,
+          metadata: { ...duplicated.metadata },
+        }
+        e.preventDefault()
       }
     }
 
     window.addEventListener('keydown', handleKeyDown)
     return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [selectedId])
+  }, [selectedId, regions, naturalSize.width, naturalSize.height])
 
   const getPct = (e: React.MouseEvent): { px: number; py: number } => {
     const el = wrapperRef.current
@@ -319,28 +380,7 @@ export function useImageCoordinateFinder() {
   const duplicateRegion = (id: string) => {
     const source = regions.find((region) => region.id === id)
     if (!source) return
-
-    const offsetPct = 1
-    const nextPx = clamp(source.px + offsetPct, 0, 100 - source.pw)
-    const nextPy = clamp(source.py + offsetPct, 0, 100 - source.ph)
-    const labels = new Set(regions.map((region) => region.label))
-    const copiedLabel = getCopiedLabel(source.label, labels)
-    const duplicated: Region = {
-      ...source,
-      id: crypto.randomUUID(),
-      label: copiedLabel,
-      px: nextPx,
-      py: nextPy,
-      x:
-        naturalSize.width > 0
-          ? Math.round((nextPx / 100) * naturalSize.width)
-          : source.x,
-      y:
-        naturalSize.height > 0
-          ? Math.round((nextPy / 100) * naturalSize.height)
-          : source.y,
-      metadata: { ...source.metadata },
-    }
+    const duplicated = buildDuplicatedRegion(source, regions)
 
     setRegions((prev) => [...prev, duplicated])
     setSelectedId(duplicated.id)
