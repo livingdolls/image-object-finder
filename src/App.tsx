@@ -29,6 +29,7 @@ function App() {
     clearAll,
     copyJSON,
     deleteRegion,
+    duplicateRegion,
     updateLabel,
     addMetadataField,
     updateMetadataField,
@@ -70,6 +71,7 @@ function App() {
           onClearAll={clearAll}
           onCopyJson={copyJSON}
           onDeleteRegion={deleteRegion}
+          onCopyRegion={duplicateRegion}
           onUpdateLabel={updateLabel}
           onToggleExpanded={toggleRegionExpanded}
           onAddMetadataField={addMetadataField}

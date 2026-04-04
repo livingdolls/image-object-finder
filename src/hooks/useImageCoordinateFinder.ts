@@ -13,6 +13,17 @@ const clamp = (value: number, min: number, max: number) =>
 
 const ALIGN_TOLERANCE_PCT = 0.3
 
+const getCopiedLabel = (label: string, existingLabels: Set<string>) => {
+  const base = `${label} Copy`
+  if (!existingLabels.has(base)) return base
+
+  let index = 2
+  while (existingLabels.has(`${base} ${index}`)) {
+    index += 1
+  }
+  return `${base} ${index}`
+}
+
 const getAlignedActivePoints = (
   activePoints: number[],
   otherPoints: number[],
@@ -305,6 +316,37 @@ export function useImageCoordinateFinder() {
     if (expandedRegionId === id) setExpandedRegionId(null)
   }
 
+  const duplicateRegion = (id: string) => {
+    const source = regions.find((region) => region.id === id)
+    if (!source) return
+
+    const offsetPct = 1
+    const nextPx = clamp(source.px + offsetPct, 0, 100 - source.pw)
+    const nextPy = clamp(source.py + offsetPct, 0, 100 - source.ph)
+    const labels = new Set(regions.map((region) => region.label))
+    const copiedLabel = getCopiedLabel(source.label, labels)
+    const duplicated: Region = {
+      ...source,
+      id: crypto.randomUUID(),
+      label: copiedLabel,
+      px: nextPx,
+      py: nextPy,
+      x:
+        naturalSize.width > 0
+          ? Math.round((nextPx / 100) * naturalSize.width)
+          : source.x,
+      y:
+        naturalSize.height > 0
+          ? Math.round((nextPy / 100) * naturalSize.height)
+          : source.y,
+      metadata: { ...source.metadata },
+    }
+
+    setRegions((prev) => [...prev, duplicated])
+    setSelectedId(duplicated.id)
+    setExpandedRegionId(duplicated.id)
+  }
+
   const updateLabel = (id: string, label: string) => {
     setRegions((prev) => prev.map((region) => (region.id === id ? { ...region, label } : region)))
   }
@@ -473,6 +515,7 @@ export function useImageCoordinateFinder() {
     clearAll,
     copyJSON,
     deleteRegion,
+    duplicateRegion,
     updateLabel,
     addMetadataField,
     updateMetadataField,

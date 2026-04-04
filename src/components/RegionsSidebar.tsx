@@ -10,6 +10,7 @@ interface RegionsSidebarProps {
   onClearAll: () => void
   onCopyJson: () => Promise<void>
   onDeleteRegion: (id: string) => void
+  onCopyRegion: (id: string) => void
   onUpdateLabel: (id: string, label: string) => void
   onToggleExpanded: (id: string) => void
   onAddMetadataField: (id: string) => void
@@ -27,6 +28,7 @@ export function RegionsSidebar({
   onClearAll,
   onCopyJson,
   onDeleteRegion,
+  onCopyRegion,
   onUpdateLabel,
   onToggleExpanded,
   onAddMetadataField,
@@ -83,6 +85,16 @@ export function RegionsSidebar({
                   }}
                 >
                   +
+                </button>
+                <button
+                  className="icf-ri-copy"
+                  title="Copy region"
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    onCopyRegion(region.id)
+                  }}
+                >
+                  ⧉
                 </button>
                 <button
                   className="icf-ri-delete"
