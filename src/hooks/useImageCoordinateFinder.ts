@@ -3,6 +3,7 @@ import type {
   AlignmentMode,
   DragState,
   DrawState,
+  HistoryEntry,
   Region,
   ResizeHandle,
   ResizeState,
@@ -12,6 +13,7 @@ const clamp = (value: number, min: number, max: number) =>
   Math.max(min, Math.min(value, max))
 
 const ALIGN_TOLERANCE_PCT = 0.3
+const HISTORY_STORAGE_KEY = 'icf-history-v1'
 
 const getCopiedLabel = (label: string, existingLabels: Set<string>) => {
   const base = `${label} Copy`
@@ -43,8 +45,18 @@ const getAlignedActivePoints = (
   return [...alignedPoints].sort((a, b) => a - b)
 }
 
+const fileToDataUrl = (file: File) =>
+  new Promise<string>((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(reader.result as string)
+    reader.onerror = () => reject(new Error('Failed to read image file'))
+    reader.readAsDataURL(file)
+  })
+
 export function useImageCoordinateFinder() {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
+  const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
+  const [imageName, setImageName] = useState<string>('Untitled image')
   const [naturalSize, setNaturalSize] = useState({ width: 0, height: 0 })
   const [regions, setRegions] = useState<Region[]>([])
   const [draw, setDraw] = useState<DrawState>({
@@ -77,6 +89,16 @@ export function useImageCoordinateFinder() {
   const [alignmentMode, setAlignmentMode] = useState<AlignmentMode>('all')
   const [copied, setCopied] = useState(false)
   const [expandedRegionId, setExpandedRegionId] = useState<string | null>(null)
+  const [history, setHistory] = useState<HistoryEntry[]>(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_STORAGE_KEY)
+      if (!raw) return []
+      const parsed = JSON.parse(raw) as HistoryEntry[]
+      return Array.isArray(parsed) ? parsed : []
+    } catch {
+      return []
+    }
+  })
 
   const wrapperRef = useRef<HTMLDivElement>(null)
   const counterRef = useRef(0)
@@ -88,6 +110,10 @@ export function useImageCoordinateFinder() {
       if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
     }
   }, [])
+
+  useEffect(() => {
+    localStorage.setItem(HISTORY_STORAGE_KEY, JSON.stringify(history))
+  }, [history])
 
   const buildDuplicatedRegion = (source: Region, targetRegions: Region[]) => {
     const offsetPct = 1
@@ -177,6 +203,14 @@ export function useImageCoordinateFinder() {
     const url = URL.createObjectURL(file)
     prevUrlRef.current = url
     setImageSrc(url)
+    setImageName(file.name)
+    void fileToDataUrl(file)
+      .then((dataUrl) => {
+        setImageDataUrl(dataUrl)
+      })
+      .catch(() => {
+        setImageDataUrl(null)
+      })
     setNaturalSize({ width: 0, height: 0 })
     setRegions([])
     setSelectedId(null)
@@ -387,6 +421,52 @@ export function useImageCoordinateFinder() {
     setExpandedRegionId(duplicated.id)
   }
 
+  const saveCurrentToHistory = () => {
+    if (!imageDataUrl) return
+
+    const entry: HistoryEntry = {
+      id: crypto.randomUUID(),
+      title: imageName,
+      imageDataUrl,
+      naturalSize,
+      regions: regions.map((region) => ({
+        ...region,
+        metadata: { ...region.metadata },
+      })),
+      createdAt: Date.now(),
+    }
+
+    setHistory((prev) => [entry, ...prev].slice(0, 20))
+  }
+
+  const loadHistoryEntry = (id: string) => {
+    const entry = history.find((item) => item.id === id)
+    if (!entry) return
+
+    if (prevUrlRef.current) {
+      URL.revokeObjectURL(prevUrlRef.current)
+      prevUrlRef.current = null
+    }
+
+    setImageSrc(entry.imageDataUrl)
+    setImageDataUrl(entry.imageDataUrl)
+    setImageName(entry.title)
+    setNaturalSize(entry.naturalSize)
+    setRegions(
+      entry.regions.map((region) => ({
+        ...region,
+        metadata: { ...region.metadata },
+      }))
+    )
+    setSelectedId(null)
+    setExpandedRegionId(null)
+    counterRef.current = entry.regions.length
+  }
+
+  const deleteHistoryEntry = (id: string) => {
+    setHistory((prev) => prev.filter((entry) => entry.id !== id))
+  }
+
   const updateLabel = (id: string, label: string) => {
     setRegions((prev) => prev.map((region) => (region.id === id ? { ...region, label } : region)))
   }
@@ -536,6 +616,7 @@ export function useImageCoordinateFinder() {
     imageSrc,
     naturalSize,
     regions,
+    history,
     selectedId,
     alignmentMode,
     copied,
@@ -553,6 +634,9 @@ export function useImageCoordinateFinder() {
     handleRegionMouseDown,
     handleResizeMouseDown,
     clearAll,
+    saveCurrentToHistory,
+    loadHistoryEntry,
+    deleteHistoryEntry,
     copyJSON,
     deleteRegion,
     duplicateRegion,

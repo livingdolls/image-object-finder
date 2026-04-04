@@ -1,13 +1,17 @@
-import type { Region } from '../types/region'
+import type { HistoryEntry, Region } from '../types/region'
 
 interface RegionsSidebarProps {
   imageSrc: string | null
   regions: Region[]
+  history: HistoryEntry[]
   selectedId: string | null
   copied: boolean
   expandedRegionId: string | null
   onSelectRegion: (id: string) => void
   onClearAll: () => void
+  onSaveHistory: () => void
+  onLoadHistory: (id: string) => void
+  onDeleteHistory: (id: string) => void
   onCopyJson: () => Promise<void>
   onDeleteRegion: (id: string) => void
   onCopyRegion: (id: string) => void
@@ -21,11 +25,15 @@ interface RegionsSidebarProps {
 export function RegionsSidebar({
   imageSrc,
   regions,
+  history,
   selectedId,
   copied,
   expandedRegionId,
   onSelectRegion,
   onClearAll,
+  onSaveHistory,
+  onLoadHistory,
+  onDeleteHistory,
   onCopyJson,
   onDeleteRegion,
   onCopyRegion,
@@ -44,6 +52,9 @@ export function RegionsSidebar({
         </h2>
         {regions.length > 0 && (
           <div className="icf-sidebar-actions">
+            <button className="icf-btn icf-btn-ghost" onClick={onSaveHistory}>
+              Save History
+            </button>
             <button className="icf-btn icf-btn-ghost" onClick={onClearAll}>
               Clear All
             </button>
@@ -192,6 +203,30 @@ export function RegionsSidebar({
             </li>
           ))}
         </ul>
+      )}
+
+      {history.length > 0 && (
+        <div className="icf-history">
+          <h3>History</h3>
+          <ul className="icf-history-list">
+            {history.map((entry) => (
+              <li key={entry.id} className="icf-history-item">
+                <div className="icf-history-main">
+                  <b>{entry.title}</b>
+                  <small>{entry.regions.length} regions</small>
+                </div>
+                <div className="icf-history-actions">
+                  <button className="icf-btn icf-btn-sm" onClick={() => onLoadHistory(entry.id)}>
+                    Load
+                  </button>
+                  <button className="icf-btn icf-btn-ghost" onClick={() => onDeleteHistory(entry.id)}>
+                    Delete
+                  </button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </div>
       )}
     </aside>
   )

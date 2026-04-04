@@ -410,6 +410,61 @@
   opacity: 0.8;
 }
 
+.icf-history {
+  margin-top: 4px;
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.icf-history h3 {
+  margin: 0 0 8px;
+  font-size: 12px;
+  color: var(--text-h);
+}
+
+.icf-history-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.icf-history-item {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px;
+  background: var(--bg);
+}
+
+.icf-history-main {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.icf-history-main b {
+  font-size: 12px;
+  color: var(--text-h);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.icf-history-main small {
+  font-size: 10px;
+  color: var(--text);
+  font-family: var(--mono);
+}
+
+.icf-history-actions {
+  display: flex;
+  gap: 6px;
+}
+
 /* ===== Region List ===== */
 
 .icf-region-list {

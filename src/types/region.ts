@@ -46,3 +46,12 @@ export interface ResizeState {
   originPw: number
   originPh: number
 }
+
+export interface HistoryEntry {
+  id: string
+  title: string
+  imageDataUrl: string
+  naturalSize: { width: number; height: number }
+  regions: Region[]
+  createdAt: number
+}

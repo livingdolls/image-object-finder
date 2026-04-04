@@ -10,6 +10,7 @@ function App() {
     imageSrc,
     naturalSize,
     regions,
+    history,
     selectedId,
     alignmentMode,
     copied,
@@ -27,6 +28,9 @@ function App() {
     handleRegionMouseDown,
     handleResizeMouseDown,
     clearAll,
+    saveCurrentToHistory,
+    loadHistoryEntry,
+    deleteHistoryEntry,
     copyJSON,
     deleteRegion,
     duplicateRegion,
@@ -66,9 +70,13 @@ function App() {
           regions={regions}
           selectedId={selectedId}
           copied={copied}
+          history={history}
           expandedRegionId={expandedRegionId}
           onSelectRegion={setSelectedId}
           onClearAll={clearAll}
+          onSaveHistory={saveCurrentToHistory}
+          onLoadHistory={loadHistoryEntry}
+          onDeleteHistory={deleteHistoryEntry}
           onCopyJson={copyJSON}
           onDeleteRegion={deleteRegion}
           onCopyRegion={duplicateRegion}
