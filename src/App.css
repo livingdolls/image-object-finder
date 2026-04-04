@@ -306,6 +306,33 @@
   pointer-events: none;
 }
 
+.icf-guide-line {
+  position: absolute;
+  pointer-events: none;
+  z-index: 6;
+  opacity: 0.95;
+  background: color-mix(in srgb, var(--accent) 78%, white 22%);
+}
+
+.icf-guide-line.aligned {
+  background: #22c55e;
+  box-shadow: 0 0 0 1px color-mix(in srgb, #22c55e 65%, transparent);
+}
+
+.icf-guide-line.x {
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-0.5px);
+}
+
+.icf-guide-line.y {
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-0.5px);
+}
+
 /* ===== Sidebar ===== */
 
 .icf-sidebar {
