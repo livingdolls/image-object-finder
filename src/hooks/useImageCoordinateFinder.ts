@@ -53,6 +53,22 @@ const fileToDataUrl = (file: File) =>
     reader.readAsDataURL(file)
   })
 
+const urlToDataUrl = (url: string) =>
+  fetch(url, { mode: 'cors' })
+    .then((res) => {
+      if (!res.ok) throw new Error(`Failed to fetch image: ${res.statusText}`)
+      return res.blob()
+    })
+    .then(
+      (blob) =>
+        new Promise<string>((resolve, reject) => {
+          const reader = new FileReader()
+          reader.onload = () => resolve(reader.result as string)
+          reader.onerror = () => reject(new Error('Failed to convert blob to DataURL'))
+          reader.readAsDataURL(blob)
+        })
+    )
+
 export function useImageCoordinateFinder() {
   const [imageSrc, setImageSrc] = useState<string | null>(null)
   const [imageDataUrl, setImageDataUrl] = useState<string | null>(null)
@@ -217,6 +233,37 @@ export function useImageCoordinateFinder() {
     setExpandedRegionId(null)
     counterRef.current = 0
     e.target.value = ''
+  }
+
+  const handleLoadImageFromUrl = async (imageUrl: string) => {
+    try {
+      const trimmedUrl = imageUrl.trim()
+      if (!trimmedUrl) return
+
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+
+      const dataUrl = await urlToDataUrl(trimmedUrl)
+      if (prevUrlRef.current) URL.revokeObjectURL(prevUrlRef.current)
+      prevUrlRef.current = null
+
+      setImageSrc(dataUrl)
+      setImageDataUrl(dataUrl)
+
+      const urlObj = new URL(trimmedUrl, window.location.href)
+      const imageName = urlObj.pathname.split('/').pop() || 'image'
+      setImageName(imageName)
+
+      setNaturalSize({ width: 0, height: 0 })
+      setRegions([])
+      setSelectedId(null)
+      setExpandedRegionId(null)
+      counterRef.current = 0
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Failed to load image from URL'
+      alert(`Error: ${message}`)
+      setImageSrc(null)
+      setImageDataUrl(null)
+    }
   }
 
   const handleImageLoad = (e: React.SyntheticEvent<HTMLImageElement>) => {
@@ -627,6 +674,7 @@ export function useImageCoordinateFinder() {
     setSelectedId,
     setAlignmentMode,
     handleFileUpload,
+    handleLoadImageFromUrl,
     handleImageLoad,
     handleMouseDown,
     handleMouseMove,

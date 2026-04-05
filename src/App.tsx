@@ -21,6 +21,7 @@ function App() {
     setSelectedId,
     setAlignmentMode,
     handleFileUpload,
+    handleLoadImageFromUrl,
     handleImageLoad,
     handleMouseDown,
     handleMouseMove,
@@ -57,6 +58,7 @@ function App() {
           onAlignmentModeChange={setAlignmentMode}
           wrapperRef={wrapperRef}
           onFileUpload={handleFileUpload}
+          onLoadImageFromUrl={handleLoadImageFromUrl}
           onMouseDown={handleMouseDown}
           onMouseMove={handleMouseMove}
           onMouseUp={handleMouseUp}
