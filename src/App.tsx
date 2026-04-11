@@ -15,6 +15,7 @@ function App() {
     alignmentMode,
     copied,
     expandedRegionId,
+    canvasViewRef,
     wrapperRef,
     activeOverlay,
     dragGuides,
@@ -56,6 +57,7 @@ function App() {
           activeOverlay={activeOverlay}
           dragGuides={dragGuides}
           onAlignmentModeChange={setAlignmentMode}
+          canvasViewRef={canvasViewRef}
           wrapperRef={wrapperRef}
           onFileUpload={handleFileUpload}
           onLoadImageFromUrl={handleLoadImageFromUrl}

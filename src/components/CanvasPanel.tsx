@@ -14,6 +14,7 @@ interface CanvasPanelProps {
     yGuides: Array<{ value: number; aligned: boolean }>
   } | null
   onAlignmentModeChange: (mode: AlignmentMode) => void
+  canvasViewRef: React.RefObject<HTMLDivElement | null>
   wrapperRef: React.RefObject<HTMLDivElement | null>
   onFileUpload: (e: React.ChangeEvent<HTMLInputElement>) => void
   onLoadImageFromUrl: (url: string) => Promise<void>
@@ -34,6 +35,7 @@ export function CanvasPanel({
   activeOverlay,
   dragGuides,
   onAlignmentModeChange,
+  canvasViewRef,
   wrapperRef,
   onFileUpload,
   onLoadImageFromUrl,
@@ -169,14 +171,13 @@ export function CanvasPanel({
             </div>
           )}
 
-          <div className="icf-canvas-view">
+          <div ref={canvasViewRef} className="icf-canvas-view">
             <div
               ref={wrapperRef}
               className="icf-image-wrapper"
               onMouseDown={onMouseDown}
               onMouseMove={onMouseMove}
               onMouseUp={onMouseUp}
-              onMouseLeave={onMouseUp}
             >
               <img src={imageSrc} alt="Uploaded" draggable={false} onLoad={onImageLoad} />
 

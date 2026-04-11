@@ -118,9 +118,12 @@ export function useImageCoordinateFinder() {
   });
 
   const wrapperRef = useRef<HTMLDivElement>(null);
+  const canvasViewRef = useRef<HTMLDivElement>(null);
   const counterRef = useRef(0);
   const prevUrlRef = useRef<string | null>(null);
   const copiedRegionRef = useRef<Region | null>(null);
+  const lastPointerClientXRef = useRef(0);
+  const lastPointerClientYRef = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -208,21 +211,27 @@ export function useImageCoordinateFinder() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedId, regions, naturalSize.width, naturalSize.height]);
 
-  const getPct = (e: React.MouseEvent): { px: number; py: number } => {
+  const getPctFromClient = (
+    clientX: number,
+    clientY: number,
+  ): { px: number; py: number } => {
     const el = wrapperRef.current;
     if (!el) return { px: 0, py: 0 };
     const rect = el.getBoundingClientRect();
     return {
       px: Math.max(
         0,
-        Math.min(((e.clientX - rect.left) / rect.width) * 100, 100),
+        Math.min(((clientX - rect.left) / rect.width) * 100, 100),
       ),
       py: Math.max(
         0,
-        Math.min(((e.clientY - rect.top) / rect.height) * 100, 100),
+        Math.min(((clientY - rect.top) / rect.height) * 100, 100),
       ),
     };
   };
+
+  const getPct = (e: React.MouseEvent): { px: number; py: number } =>
+    getPctFromClient(e.clientX, e.clientY);
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
@@ -290,6 +299,8 @@ export function useImageCoordinateFinder() {
     if (drag.active || resize.active) return;
     if (e.button !== 0) return;
     e.preventDefault();
+    lastPointerClientXRef.current = e.clientX;
+    lastPointerClientYRef.current = e.clientY;
     const { px, py } = getPct(e);
     setDraw({ active: true, startPx: px, startPy: py, curPx: px, curPy: py });
     setSelectedId(null);
@@ -299,6 +310,8 @@ export function useImageCoordinateFinder() {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    lastPointerClientXRef.current = e.clientX;
+    lastPointerClientYRef.current = e.clientY;
     const { px, py } = getPct(e);
     setSelectedId(region.id);
     setDrag({
@@ -319,6 +332,8 @@ export function useImageCoordinateFinder() {
     if (e.button !== 0) return;
     e.preventDefault();
     e.stopPropagation();
+    lastPointerClientXRef.current = e.clientX;
+    lastPointerClientYRef.current = e.clientY;
     const { px, py } = getPct(e);
     setSelectedId(region.id);
     setResize({
@@ -334,9 +349,12 @@ export function useImageCoordinateFinder() {
     });
   };
 
-  const handleMouseMove = (e: React.MouseEvent) => {
+  const handlePointerMove = (clientX: number, clientY: number) => {
+    lastPointerClientXRef.current = clientX;
+    lastPointerClientYRef.current = clientY;
+
     if (resize.active && resize.regionId) {
-      const { px, py } = getPct(e);
+      const { px, py } = getPctFromClient(clientX, clientY);
       const dx = px - resize.startPx;
       const dy = py - resize.startPy;
 
@@ -397,7 +415,7 @@ export function useImageCoordinateFinder() {
     }
 
     if (drag.active && drag.regionId) {
-      const { px, py } = getPct(e);
+      const { px, py } = getPctFromClient(clientX, clientY);
       const dx = px - drag.startPx;
       const dy = py - drag.startPy;
 
@@ -419,8 +437,12 @@ export function useImageCoordinateFinder() {
     }
 
     if (!draw.active) return;
-    const { px, py } = getPct(e);
+    const { px, py } = getPctFromClient(clientX, clientY);
     setDraw((prev) => ({ ...prev, curPx: px, curPy: py }));
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    handlePointerMove(e.clientX, e.clientY);
   };
 
   const handleMouseUp = () => {
@@ -471,6 +493,36 @@ export function useImageCoordinateFinder() {
 
     setDraw((prev) => ({ ...prev, active: false }));
   };
+
+  useEffect(() => {
+    const isInteracting = draw.active || drag.active || resize.active;
+    if (!isInteracting) return;
+
+    const onWindowMouseMove = (e: MouseEvent) => {
+      handlePointerMove(e.clientX, e.clientY);
+    };
+
+    const onWindowMouseUp = () => {
+      handleMouseUp();
+    };
+
+    const onCanvasScroll = () => {
+      handlePointerMove(
+        lastPointerClientXRef.current,
+        lastPointerClientYRef.current,
+      );
+    };
+
+    window.addEventListener("mousemove", onWindowMouseMove);
+    window.addEventListener("mouseup", onWindowMouseUp);
+    canvasViewRef.current?.addEventListener("scroll", onCanvasScroll);
+
+    return () => {
+      window.removeEventListener("mousemove", onWindowMouseMove);
+      window.removeEventListener("mouseup", onWindowMouseUp);
+      canvasViewRef.current?.removeEventListener("scroll", onCanvasScroll);
+    };
+  }, [draw.active, drag.active, resize.active, handleMouseUp, handlePointerMove]);
 
   const deleteRegion = (id: string) => {
     setRegions((prev) => prev.filter((region) => region.id !== id));
@@ -717,6 +769,7 @@ export function useImageCoordinateFinder() {
     alignmentMode,
     copied,
     expandedRegionId,
+    canvasViewRef,
     wrapperRef,
     activeOverlay,
     dragGuides,
